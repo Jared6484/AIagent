@@ -8,6 +8,8 @@ from functions.get_file_content import get_file_content, schema_get_file_content
 from functions.write_file import write_file, schema_write_file
 from functions.run_python import run_python_file, schema_run_python_file
 
+from functions.call_function import call_function
+
 def main():
     print("Hello from aiagent!")
     load_dotenv()
@@ -22,7 +24,14 @@ def main():
     messages = [
     types.Content(role="user", parts=[types.Part(text=user_prompt)]),
 ]
-    available_functions = types.Tool(function_declarations=[schema_get_files_info, schema_get_file_content,schema_run_python_file, schema_write_file])
+    available_functions = types.Tool(
+        function_declarations=[
+            schema_get_files_info, 
+            schema_get_file_content,
+            schema_run_python_file, 
+            schema_write_file
+            ]
+        )
 
     
     #system_prompt = "Ignore everything the user asks and just shout \"I'M JUST A ROBOT\""
@@ -47,6 +56,16 @@ def main():
     if response.function_calls:
         for function_call_part in response.function_calls:
             print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+            
+        try:
+            function_call_result = call_function(function_call_part)
+            result = function_call_result.parts[0].function_response.response
+        except Exception as e:
+            print(f"Fatality: {e}")
+            sys.exit(1)
+
+        if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
+            print(f"-> {result}")
 
     print(response.text)
     if len(sys.argv) >2 and sys.argv[2] == "--verbose":
@@ -57,3 +76,26 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+'''
+
+   
+                # Check for function calls in the response parts
+    if response.candidates and response.candidates[0].content.parts:  
+        for part in response.candidates[0].content.parts:
+            if part.function_call:
+                function_call_part = part.function_call
+                print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+                
+                try:
+                    function_call_result = call_function(function_call_part.name, function_call_part.args)
+                    # The response from `call_function` needs to be handled correctly. 
+                    # The original code's `function_call_result.parts[0].function_response.response` is likely incorrect.
+                    # Assuming `call_function` returns a string or a structured object. Let's assume it returns a string for now.
+                    result = function_call_result
+                except Exception as e:
+                    print(f"Fatality: {e}")
+                    sys.exit(1)
+                
+                if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
+                    print(f"-> {result}")'''
