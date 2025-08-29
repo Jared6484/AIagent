@@ -46,32 +46,49 @@ def main():
     - Write or overwrite files
     All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
     """
+    loops = 0
+    while loops<= 20:
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-001',
+            contents=messages,
+            config=types.GenerateContentConfig(tools=[available_functions],system_instruction=system_prompt),
+        )
 
-    response = client.models.generate_content(
-        model='gemini-2.0-flash-001',
-        contents=messages,
-        config=types.GenerateContentConfig(tools=[available_functions],system_instruction=system_prompt),
-    )
+        for candidate in response.candidates:
+            messages.append(candidate.content)
 
-    if response.function_calls:
-        for function_call_part in response.function_calls:
-            print(f"Calling function: {function_call_part.name}({function_call_part.args})")
-            
-        try:
-            function_call_result = call_function(function_call_part)
-            result = function_call_result.parts[0].function_response.response
-        except Exception as e:
-            print(f"Fatality: {e}")
-            sys.exit(1)
+        function_used = False
+        for part in response.candidates[0].content.parts:
+            #if response.function_calls:
+            if part.function_call:
+                #for function_call_part in response.function_calls:
+                func = part.function_call
+                #print(f"Calling function: {func.name}({func.args})")
+                print(f"Calling function: {func.name}")
+                    
+                try:
+                    function_call_result = call_function(func)
+                    result = function_call_result.parts[0].function_response.response["result"]
+                except Exception as e:
+                    print(f"Fatality: {e}")
+                    sys.exit(1)
 
-        if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
-            print(f"-> {result}")
+                if len(sys.argv) > 2 and sys.argv[2] == "--verbose":
+                    print(f"-> {result}")
 
-    print(response.text)
-    if len(sys.argv) >2 and sys.argv[2] == "--verbose":
-        print(f"User prompt: {user_prompt}")
-        print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-        print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+                messages.append(function_call_result)
+                function_used = True
+            if loops == 20: 
+                print("Fatality: Reached 20 iterations without a final respons." )
+                sys.exit(1)
+
+        if not function_used:
+            print(response.text)
+            if len(sys.argv) >2 and sys.argv[2] == "--verbose":
+                print(f"User prompt: {user_prompt}")
+                print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
+                print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+            break
 
 
 if __name__ == "__main__":

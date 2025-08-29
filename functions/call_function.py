@@ -23,11 +23,11 @@ def call_function(function_call_part, verbose=False):
 
     func_args["working_directory"] = WORKING_DIRECTORY
 
-    if verbose:
+    #if verbose:
         #print(f"Calling function: {function_call_part.name}({function_call_part.args})")
-        print(f"Calling function: {func_name}({func_args})")
-    else:
-        print(f" - Calling function: {func_name}")
+    #    print(f"Calling function: {func_name}({func_args})")
+    #else:
+    #    print(f" - Calling function: {func_name}")
 
     if func_name not in FUNCTION_MAP:
         return types.Content(
